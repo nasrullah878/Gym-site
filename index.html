@@ -1,58 +1,132 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Pro Gym</title>
-<link rel="stylesheet" href="css/style.css">
+  <title>Car Game</title>
+  <style>
+    body {
+      text-align: center;
+      background: #111;
+      color: white;
+      font-family: Arial;
+    }
+
+    canvas {
+      background: #222;
+      display: block;
+      margin: auto;
+      border: 2px solid white;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin: 10px;
+      font-size: 18px;
+    }
+  </style>
 </head>
 
 <body>
 
-<header>
-<h1>PRO GYM FITNESS</h1>
-<nav>
-<a href="#home">Home</a>
-<a href="#trainers">Trainers</a>
-<a href="#membership">Membership</a>
-<a href="login.html">Login</a>
-</nav>
-</header>
+<h2>🚗 Car Racing Game</h2>
+<canvas id="game" width="400" height="600"></canvas>
 
-<section class="hero">
-<img src="images/hero.jpg">
-<h2>Transform Your Body</h2>
-</section>
+<br>
+<button onclick="moveLeft()">⬅ Left</button>
+<button onclick="moveRight()">➡ Right</button>
 
-<section id="trainers">
-<h2>Our Trainers</h2>
+<p id="score">Score: 0</p>
 
-<div class="trainer">
-<img src="images/trainer1.jpg">
-<h3>John Carter</h3>
-<p>Strength Coach</p>
-</div>
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-<div class="trainer">
-<img src="images/trainer2.jpg">
-<h3>Sarah Smith</h3>
-<p>Yoga Expert</p>
-</div>
+let car = { x: 180, y: 500, w: 40, h: 60 };
+let obstacles = [];
+let score = 0;
+let gameOver = false;
 
-</section>
+// draw car
+function drawCar() {
+  ctx.fillStyle = "lime";
+  ctx.fillRect(car.x, car.y, car.w, car.h);
+}
 
-<section id="membership">
-<h2>Membership Plans</h2>
+// draw obstacles
+function drawObstacles() {
+  ctx.fillStyle = "red";
+  obstacles.forEach(obs => {
+    ctx.fillRect(obs.x, obs.y, 40, 40);
+  });
+}
 
-<div class="plan">
-<h3>Basic</h3>
-<p>$20/month</p>
-</div>
+// move obstacles
+function updateObstacles() {
+  for (let i = 0; i < obstacles.length; i++) {
+    obstacles[i].y += 5;
 
-<div class="plan">
-<h3>Pro</h3>
-<p>$50/month</p>
-</div>
+    // collision check
+    if (
+      car.x < obstacles[i].x + 40 &&
+      car.x + car.w > obstacles[i].x &&
+      car.y < obstacles[i].y + 40 &&
+      car.y + car.h > obstacles[i].y
+    ) {
+      gameOver = true;
+    }
 
-</section>
+    // score increase
+    if (obstacles[i].y > 600) {
+      obstacles.splice(i, 1);
+      score++;
+      document.getElementById("score").innerText = "Score: " + score;
+    }
+  }
+}
+
+// spawn obstacles
+function spawnObstacle() {
+  let x = Math.floor(Math.random() * 360);
+  obstacles.push({ x: x, y: 0 });
+}
+
+// controls
+function moveLeft() {
+  if (car.x > 0) car.x -= 20;
+}
+
+function moveRight() {
+  if (car.x < 360) car.x += 20;
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowLeft") moveLeft();
+  if (e.key === "ArrowRight") moveRight();
+});
+
+// game loop
+function gameLoop() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (gameOver) {
+    ctx.fillStyle = "white";
+    ctx.font = "30px Arial";
+    ctx.fillText("Game Over", 120, 300);
+    return;
+  }
+
+  drawCar();
+  drawObstacles();
+  updateObstacles();
+
+  requestAnimationFrame(gameLoop);
+}
+
+// spawn loop
+setInterval(spawnObstacle, 1000);
+
+// start game
+gameLoop();
+</script>
 
 </body>
 </html>
