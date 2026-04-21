@@ -25,7 +25,7 @@
       width: 100%;
       display: flex;
       justify-content: center;
-      gap: 30px;
+      gap: 25px;
     }
 
     button {
@@ -33,6 +33,7 @@
       font-size: 18px;
       border-radius: 10px;
       border: none;
+      background: white;
     }
 
     #restart {
@@ -53,60 +54,72 @@
 <button id="restart" onclick="restart()">🔄 Restart</button>
 
 <div class="controls">
-  <button ontouchstart="move(-1)" onclick="move(-1)">⬅</button>
-  <button ontouchstart="move(1)" onclick="move(1)">➡</button>
+  <button id="leftBtn">⬅</button>
+  <button id="rightBtn">➡</button>
 </div>
 
-<!-- 🎧 SOUND -->
-<audio id="crashSound" src="https://www.soundjay.com/button/beep-07.wav"></audio>
-<audio id="coinSound" src="https://www.soundjay.com/button/beep-09.wav"></audio>
+<audio id="coinSound" src="https://www.soundjay.com/button/beep-07.wav"></audio>
+<audio id="crashSound" src="https://www.soundjay.com/button/beep-10.wav"></audio>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
+// 🚗 GAME STATE
 let car, enemies, coins, score, gameOver;
-let dir = 0;
+let keys = { left:false, right:false };
 
+// INIT
 function init() {
-  car = { x: 155, y: 500, w: 40, h: 70 };
+  car = { x: 155, y: 500, w: 40, h: 70, speed: 6 };
   enemies = [];
   coins = [];
   score = 0;
   gameOver = false;
+
   document.getElementById("restart").style.display = "none";
 }
 
 init();
 
-// 🎮 movement
-function move(d) {
-  dir = d;
+// 🛣 CURVED ROAD
+let roadOffset = 0;
 
-  // 🔊 unlock sound on first interaction (important fix)
-  document.getElementById("crashSound").play().catch(()=>{});
-}
-
-// 🚗 spawn enemy
+// 🚗 SPAWN
 function spawnEnemy() {
   enemies.push({ x: Math.random() * 310, y: -80 });
 }
 
-// 💰 spawn coin
 function spawnCoin() {
   coins.push({ x: Math.random() * 310, y: -50 });
 }
 
-// 🎧 sounds
-function playCrash() {
-  document.getElementById("crashSound").play();
+// 🎮 INPUT FIX (KEYBOARD)
+document.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowLeft" || e.key === "a") keys.left = true;
+  if (e.key === "ArrowRight" || e.key === "d") keys.right = true;
+});
+
+document.addEventListener("keyup", (e) => {
+  if (e.key === "ArrowLeft" || e.key === "a") keys.left = false;
+  if (e.key === "ArrowRight" || e.key === "d") keys.right = false;
+});
+
+// 📱 TOUCH FIX (IMPORTANT)
+function bindButton(id, dir) {
+  let btn = document.getElementById(id);
+
+  btn.addEventListener("touchstart", () => keys[dir] = true);
+  btn.addEventListener("touchend", () => keys[dir] = false);
+
+  btn.addEventListener("mousedown", () => keys[dir] = true);
+  btn.addEventListener("mouseup", () => keys[dir] = false);
 }
 
-function playCoin() {
-  document.getElementById("coinSound").play();
-}
+bindButton("leftBtn", "left");
+bindButton("rightBtn", "right");
 
-// 🚗 draw car (real shape)
+// 🚗 CAR DRAW
 function drawCar() {
   ctx.fillStyle = "lime";
   ctx.fillRect(car.x, car.y, car.w, car.h);
@@ -115,34 +128,60 @@ function drawCar() {
   ctx.fillRect(car.x + 8, car.y + 10, 24, 20);
 }
 
-// 🚙 enemies
+// 🚙 ENEMIES
 function drawEnemies() {
   ctx.fillStyle = "red";
   enemies.forEach(e => ctx.fillRect(e.x, e.y, 40, 70));
 }
 
-// 💰 coins
+// 💰 COINS
 function drawCoins() {
   ctx.fillStyle = "gold";
   coins.forEach(c => {
     ctx.beginPath();
-    ctx.arc(c.x, c.y, 8, 0, Math.PI * 2);
+    ctx.arc(c.x, c.y, 7, 0, Math.PI * 2);
     ctx.fill();
   });
 }
 
-// 🔁 update game
+// 🛣 ROAD (CURVED EFFECT)
+function drawRoad() {
+  ctx.fillStyle = "#333";
+  ctx.fillRect(0, 0, 350, 600);
+
+  ctx.fillStyle = "white";
+  roadOffset += 4;
+
+  for (let i = 0; i < 10; i++) {
+    let x = 170 + Math.sin((i + roadOffset * 0.02)) * 60;
+    ctx.fillRect(x, i * 70, 10, 40);
+  }
+}
+
+// 🎧 SOUND
+function coinSound() {
+  document.getElementById("coinSound").play();
+}
+
+function crashSound() {
+  document.getElementById("crashSound").play();
+}
+
+// 🔁 UPDATE GAME
 function update() {
   if (gameOver) return;
 
-  car.x += dir * 5;
+  // 🚗 smooth movement (FIXED)
+  if (keys.left) car.x -= car.speed;
+  if (keys.right) car.x += car.speed;
+
   if (car.x < 0) car.x = 0;
   if (car.x > 310) car.x = 310;
 
-  enemies.forEach(e => e.y += 6);
+  enemies.forEach(e => e.y += 5);
   coins.forEach(c => c.y += 5);
 
-  // collision enemies
+  // 🚙 collision enemies
   enemies.forEach((e, i) => {
     if (
       car.x < e.x + 40 &&
@@ -150,7 +189,7 @@ function update() {
       car.y < e.y + 70 &&
       car.y + car.h > e.y
     ) {
-      playCrash();
+      crashSound();
       gameOver = true;
       document.getElementById("restart").style.display = "block";
     }
@@ -158,7 +197,7 @@ function update() {
     if (e.y > 600) enemies.splice(i, 1);
   });
 
-  // coins collect
+  // 💰 coins
   coins.forEach((c, i) => {
     if (
       car.x < c.x + 10 &&
@@ -166,7 +205,7 @@ function update() {
       car.y < c.y + 10 &&
       car.y + car.h > c.y
     ) {
-      playCoin();
+      coinSound();
       score++;
       coins.splice(i, 1);
     }
@@ -180,13 +219,11 @@ function restart() {
   init();
 }
 
-// 🎮 loop
+// 🎮 LOOP
 function loop() {
   ctx.clearRect(0, 0, 350, 600);
 
-  // road
-  ctx.fillStyle = "#333";
-  ctx.fillRect(0, 0, 350, 600);
+  drawRoad();
 
   if (!gameOver) {
     drawCar();
@@ -204,13 +241,13 @@ function loop() {
   requestAnimationFrame(loop);
 }
 
-// ⏱ spawn system
+// ⏱ SPAWN SYSTEM
 setInterval(() => {
   if (!gameOver) {
     spawnEnemy();
     if (Math.random() > 0.6) spawnCoin();
   }
-}, 900);
+}, 800);
 
 loop();
 </script>
