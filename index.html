@@ -1,54 +1,69 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Clean Traffic Car Game</title>
+  <title>Mobile Car Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <style>
     body {
       margin: 0;
-      background: #000;
-      color: white;
-      text-align: center;
+      background: black;
       font-family: Arial;
+      text-align: center;
+      color: white;
+      overflow: hidden;
     }
 
+    /* 📱 BIG FULL SCREEN CANVAS */
     canvas {
-      background: #111;
+      width: 100vw;
+      height: 80vh;
       display: block;
-      margin: auto;
-      border: 2px solid white;
+      background: #111;
     }
 
+    #score {
+      font-size: 20px;
+      margin: 5px;
+    }
+
+    /* 📱 BIG MOBILE BUTTONS */
     .controls {
       position: fixed;
-      bottom: 20px;
+      bottom: 10px;
       width: 100%;
       display: flex;
-      justify-content: center;
-      gap: 30px;
+      justify-content: space-between;
+      padding: 0 30px;
     }
 
     button {
-      padding: 15px 25px;
-      font-size: 18px;
-      border-radius: 10px;
+      width: 120px;
+      height: 80px;
+      font-size: 30px;
+      border-radius: 15px;
       border: none;
       background: white;
     }
 
     #restart {
       display: none;
-      margin-top: 10px;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 20px 40px;
+      font-size: 22px;
     }
   </style>
 </head>
 
 <body>
 
-<h2>🚗 Clean Traffic Car Game</h2>
+<h3>🚗 Mobile Car Game</h3>
+<div id="score">Score: 0</div>
 
-<canvas id="game" width="400" height="600"></canvas>
-
-<p id="score">Score: 0</p>
+<canvas id="game"></canvas>
 
 <button id="restart" onclick="restart()">🔄 Restart</button>
 
@@ -61,21 +76,34 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
+// 📱 FIX HIGH DPI (IMPORTANT FOR MOBILE ZOOM)
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight * 0.8;
+}
+resize();
+window.addEventListener("resize", resize);
+
 // 🚗 GAME STATE
-let car, traffic, keys, score, gameOver;
+let car, traffic, score, gameOver;
+let keys = { left:false, right:false };
 
 function init() {
-  car = { x: 180, y: 500, w: 40, h: 70, speed: 6 };
-
+  car = { x: 0, y: 0, w: 50, h: 80, speed: 6 };
   traffic = [];
-  keys = { left:false, right:false };
   score = 0;
   gameOver = false;
-
   document.getElementById("restart").style.display = "none";
 }
 
 init();
+
+// 📱 CENTER CAR ON SCREEN
+function resetCar() {
+  car.x = canvas.width / 2 - 25;
+  car.y = canvas.height - 120;
+}
+resetCar();
 
 // 🎮 INPUT FIX
 document.addEventListener("keydown", e => {
@@ -88,12 +116,19 @@ document.addEventListener("keyup", e => {
   if (e.key === "ArrowRight") keys.right = false;
 });
 
-// 📱 TOUCH FIX
+// 📱 BIG TOUCH BUTTONS (FIXED HOLD)
 function bind(id, dir) {
   let b = document.getElementById(id);
 
-  b.addEventListener("touchstart", () => keys[dir] = true);
-  b.addEventListener("touchend", () => keys[dir] = false);
+  b.addEventListener("touchstart", e => {
+    e.preventDefault();
+    keys[dir] = true;
+  });
+
+  b.addEventListener("touchend", e => {
+    e.preventDefault();
+    keys[dir] = false;
+  });
 
   b.addEventListener("mousedown", () => keys[dir] = true);
   b.addEventListener("mouseup", () => keys[dir] = false);
@@ -103,115 +138,111 @@ bind("left", "left");
 bind("right", "right");
 
 // 🚗 DRAW CAR
-function drawCar(x, y, color) {
-  ctx.fillStyle = color;
-  ctx.fillRect(x, y, 40, 70);
+function drawCar() {
+  ctx.fillStyle = "lime";
+  ctx.fillRect(car.x, car.y, car.w, car.h);
 
   ctx.fillStyle = "black";
-  ctx.fillRect(x + 10, y + 10, 20, 20);
+  ctx.fillRect(car.x + 15, car.y + 15, 20, 30);
 }
 
-// 🚙 TRAFFIC CARS
+// 🚙 TRAFFIC
 function spawnTraffic() {
-  let lanes = [140, 180, 220, 260];
-
   traffic.push({
-    x: lanes[Math.floor(Math.random() * lanes.length)],
+    x: Math.random() * (canvas.width - 60),
     y: -100,
-    speed: 4 + Math.random() * 2
+    speed: 5
   });
 }
 
-// 🛣 WIDE ROAD
+// 🛣 ROAD
 let lineY = 0;
 
 function drawRoad() {
   ctx.fillStyle = "#111";
-  ctx.fillRect(0, 0, 400, 600);
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // road
   ctx.fillStyle = "#333";
-  ctx.fillRect(120, 0, 160, 600);
+  ctx.fillRect(canvas.width/2 - 80, 0, 160, canvas.height);
 
-  // lane lines
   ctx.fillStyle = "white";
   for (let i = 0; i < 10; i++) {
-    ctx.fillRect(198, (i * 60 + lineY) % 600, 6, 30);
+    ctx.fillRect(canvas.width/2 - 5,
+      (i * 80 + lineY) % canvas.height,
+      10, 40);
   }
 
-  lineY += 4;
+  lineY += 5;
 }
 
-// 🚙 update traffic
+// 🚙 UPDATE TRAFFIC
 function updateTraffic() {
   for (let i = 0; i < traffic.length; i++) {
     traffic[i].y += traffic[i].speed;
 
-    drawCar(traffic[i].x, traffic[i].y, "red");
+    // draw enemy car
+    ctx.fillStyle = "red";
+    ctx.fillRect(traffic[i].x, traffic[i].y, 50, 80);
 
     // collision
     if (
-      car.x < traffic[i].x + 40 &&
+      car.x < traffic[i].x + 50 &&
       car.x + car.w > traffic[i].x &&
-      car.y < traffic[i].y + 70 &&
+      car.y < traffic[i].y + 80 &&
       car.y + car.h > traffic[i].y
     ) {
       gameOver = true;
       document.getElementById("restart").style.display = "block";
     }
 
-    if (traffic[i].y > 650) {
+    if (traffic[i].y > canvas.height) {
       traffic.splice(i, 1);
       score++;
+      document.getElementById("score").innerText = "Score: " + score;
     }
   }
 }
 
-// 🚗 PLAYER MOVEMENT
+// 🚗 MOVE CAR (SMOOTH)
 function updateCar() {
   if (keys.left) car.x -= car.speed;
   if (keys.right) car.x += car.speed;
 
-  if (car.x < 120) car.x = 120;
-  if (car.x > 240) car.x = 240;
+  if (car.x < canvas.width/2 - 80) car.x = canvas.width/2 - 80;
+  if (car.x > canvas.width/2 + 30) car.x = canvas.width/2 + 30;
 }
 
 // 🔄 restart
 function restart() {
   init();
+  resetCar();
 }
 
-// 📊 score
-function updateScore() {
-  document.getElementById("score").innerText = "Score: " + score;
-}
-
-// 🎮 loop
+// 🎮 LOOP
 function loop() {
-  ctx.clearRect(0, 0, 400, 600);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   drawRoad();
 
   if (!gameOver) {
-    drawCar(car.x, car.y, "lime");
+    drawCar();
     updateCar();
     updateTraffic();
-    updateScore();
   } else {
     ctx.fillStyle = "white";
     ctx.font = "30px Arial";
-    ctx.fillText("💥 GAME OVER", 90, 250);
+    ctx.fillText("💥 GAME OVER", 50, canvas.height/2);
     ctx.font = "20px Arial";
-    ctx.fillText("Score: " + score, 130, 300);
+    ctx.fillText("Score: " + score, 80, canvas.height/2 + 40);
   }
 
   requestAnimationFrame(loop);
 }
 
-// ⏱ spawn traffic
+// ⏱ spawn cars
 setInterval(() => {
   if (!gameOver) spawnTraffic();
-}, 900);
+}, 1000);
 
 loop();
 </script>
