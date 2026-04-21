@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Clean Car Game</title>
+  <title>Clean Traffic Car Game</title>
   <style>
     body {
       margin: 0;
@@ -44,9 +44,9 @@
 
 <body>
 
-<h2>🚗 Clean Car Game</h2>
+<h2>🚗 Clean Traffic Car Game</h2>
 
-<canvas id="game" width="350" height="600"></canvas>
+<canvas id="game" width="400" height="600"></canvas>
 
 <p id="score">Score: 0</p>
 
@@ -61,10 +61,13 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-let car, keys, score, gameOver;
+// 🚗 GAME STATE
+let car, traffic, keys, score, gameOver;
 
 function init() {
-  car = { x: 155, y: 500, w: 40, h: 70, speed: 6 };
+  car = { x: 180, y: 500, w: 40, h: 70, speed: 6 };
+
+  traffic = [];
   keys = { left:false, right:false };
   score = 0;
   gameOver = false;
@@ -74,7 +77,7 @@ function init() {
 
 init();
 
-// 🎮 keyboard control (smooth hold)
+// 🎮 INPUT FIX
 document.addEventListener("keydown", e => {
   if (e.key === "ArrowLeft") keys.left = true;
   if (e.key === "ArrowRight") keys.right = true;
@@ -85,9 +88,9 @@ document.addEventListener("keyup", e => {
   if (e.key === "ArrowRight") keys.right = false;
 });
 
-// 📱 touch control fix
-function bind(btn, dir) {
-  let b = document.getElementById(btn);
+// 📱 TOUCH FIX
+function bind(id, dir) {
+  let b = document.getElementById(id);
 
   b.addEventListener("touchstart", () => keys[dir] = true);
   b.addEventListener("touchend", () => keys[dir] = false);
@@ -99,45 +102,78 @@ function bind(btn, dir) {
 bind("left", "left");
 bind("right", "right");
 
-// 🚗 draw car (simple)
-function drawCar() {
-  ctx.fillStyle = "lime";
-  ctx.fillRect(car.x, car.y, car.w, car.h);
+// 🚗 DRAW CAR
+function drawCar(x, y, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, 40, 70);
 
   ctx.fillStyle = "black";
-  ctx.fillRect(car.x + 10, car.y + 10, 20, 20);
+  ctx.fillRect(x + 10, y + 10, 20, 20);
 }
 
-// 🛣 simple road
+// 🚙 TRAFFIC CARS
+function spawnTraffic() {
+  let lanes = [140, 180, 220, 260];
+
+  traffic.push({
+    x: lanes[Math.floor(Math.random() * lanes.length)],
+    y: -100,
+    speed: 4 + Math.random() * 2
+  });
+}
+
+// 🛣 WIDE ROAD
 let lineY = 0;
 
 function drawRoad() {
   ctx.fillStyle = "#111";
-  ctx.fillRect(0, 0, 350, 600);
+  ctx.fillRect(0, 0, 400, 600);
 
+  // road
   ctx.fillStyle = "#333";
-  ctx.fillRect(150, 0, 50, 600);
+  ctx.fillRect(120, 0, 160, 600);
 
+  // lane lines
   ctx.fillStyle = "white";
   for (let i = 0; i < 10; i++) {
-    ctx.fillRect(172, (i * 60 + lineY) % 600, 6, 30);
+    ctx.fillRect(198, (i * 60 + lineY) % 600, 6, 30);
   }
 
   lineY += 4;
 }
 
-// 🎮 update
-function update() {
-  if (gameOver) return;
+// 🚙 update traffic
+function updateTraffic() {
+  for (let i = 0; i < traffic.length; i++) {
+    traffic[i].y += traffic[i].speed;
 
+    drawCar(traffic[i].x, traffic[i].y, "red");
+
+    // collision
+    if (
+      car.x < traffic[i].x + 40 &&
+      car.x + car.w > traffic[i].x &&
+      car.y < traffic[i].y + 70 &&
+      car.y + car.h > traffic[i].y
+    ) {
+      gameOver = true;
+      document.getElementById("restart").style.display = "block";
+    }
+
+    if (traffic[i].y > 650) {
+      traffic.splice(i, 1);
+      score++;
+    }
+  }
+}
+
+// 🚗 PLAYER MOVEMENT
+function updateCar() {
   if (keys.left) car.x -= car.speed;
   if (keys.right) car.x += car.speed;
 
   if (car.x < 120) car.x = 120;
-  if (car.x > 190) car.x = 190;
-
-  score++;
-  document.getElementById("score").innerText = "Score: " + score;
+  if (car.x > 240) car.x = 240;
 }
 
 // 🔄 restart
@@ -145,19 +181,37 @@ function restart() {
   init();
 }
 
+// 📊 score
+function updateScore() {
+  document.getElementById("score").innerText = "Score: " + score;
+}
+
 // 🎮 loop
 function loop() {
-  ctx.clearRect(0, 0, 350, 600);
+  ctx.clearRect(0, 0, 400, 600);
 
   drawRoad();
 
   if (!gameOver) {
-    drawCar();
-    update();
+    drawCar(car.x, car.y, "lime");
+    updateCar();
+    updateTraffic();
+    updateScore();
+  } else {
+    ctx.fillStyle = "white";
+    ctx.font = "30px Arial";
+    ctx.fillText("💥 GAME OVER", 90, 250);
+    ctx.font = "20px Arial";
+    ctx.fillText("Score: " + score, 130, 300);
   }
 
   requestAnimationFrame(loop);
 }
+
+// ⏱ spawn traffic
+setInterval(() => {
+  if (!gameOver) spawnTraffic();
+}, 900);
 
 loop();
 </script>
