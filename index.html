@@ -1,31 +1,30 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Modern Car Game</title>
+  <title>Clean Car Game</title>
   <style>
     body {
       margin: 0;
-      background: #111;
+      background: #000;
       color: white;
       text-align: center;
       font-family: Arial;
-      overflow: hidden;
     }
 
     canvas {
-      background: #222;
+      background: #111;
       display: block;
       margin: auto;
-      border: 3px solid white;
+      border: 2px solid white;
     }
 
     .controls {
       position: fixed;
-      bottom: 15px;
+      bottom: 20px;
       width: 100%;
       display: flex;
       justify-content: center;
-      gap: 25px;
+      gap: 30px;
     }
 
     button {
@@ -45,35 +44,28 @@
 
 <body>
 
-<h2>🚗 Modern Car Game</h2>
+<h2>🚗 Clean Car Game</h2>
 
 <canvas id="game" width="350" height="600"></canvas>
 
-<p id="info">Score: 0</p>
+<p id="score">Score: 0</p>
 
 <button id="restart" onclick="restart()">🔄 Restart</button>
 
 <div class="controls">
-  <button id="leftBtn">⬅</button>
-  <button id="rightBtn">➡</button>
+  <button id="left">⬅</button>
+  <button id="right">➡</button>
 </div>
-
-<audio id="coinSound" src="https://www.soundjay.com/button/beep-07.wav"></audio>
-<audio id="crashSound" src="https://www.soundjay.com/button/beep-10.wav"></audio>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-// 🚗 GAME STATE
-let car, enemies, coins, score, gameOver;
-let keys = { left:false, right:false };
+let car, keys, score, gameOver;
 
-// INIT
 function init() {
   car = { x: 155, y: 500, w: 40, h: 70, speed: 6 };
-  enemies = [];
-  coins = [];
+  keys = { left:false, right:false };
   score = 0;
   gameOver = false;
 
@@ -82,136 +74,70 @@ function init() {
 
 init();
 
-// 🛣 CURVED ROAD
-let roadOffset = 0;
-
-// 🚗 SPAWN
-function spawnEnemy() {
-  enemies.push({ x: Math.random() * 310, y: -80 });
-}
-
-function spawnCoin() {
-  coins.push({ x: Math.random() * 310, y: -50 });
-}
-
-// 🎮 INPUT FIX (KEYBOARD)
-document.addEventListener("keydown", (e) => {
-  if (e.key === "ArrowLeft" || e.key === "a") keys.left = true;
-  if (e.key === "ArrowRight" || e.key === "d") keys.right = true;
+// 🎮 keyboard control (smooth hold)
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowLeft") keys.left = true;
+  if (e.key === "ArrowRight") keys.right = true;
 });
 
-document.addEventListener("keyup", (e) => {
-  if (e.key === "ArrowLeft" || e.key === "a") keys.left = false;
-  if (e.key === "ArrowRight" || e.key === "d") keys.right = false;
+document.addEventListener("keyup", e => {
+  if (e.key === "ArrowLeft") keys.left = false;
+  if (e.key === "ArrowRight") keys.right = false;
 });
 
-// 📱 TOUCH FIX (IMPORTANT)
-function bindButton(id, dir) {
-  let btn = document.getElementById(id);
+// 📱 touch control fix
+function bind(btn, dir) {
+  let b = document.getElementById(btn);
 
-  btn.addEventListener("touchstart", () => keys[dir] = true);
-  btn.addEventListener("touchend", () => keys[dir] = false);
+  b.addEventListener("touchstart", () => keys[dir] = true);
+  b.addEventListener("touchend", () => keys[dir] = false);
 
-  btn.addEventListener("mousedown", () => keys[dir] = true);
-  btn.addEventListener("mouseup", () => keys[dir] = false);
+  b.addEventListener("mousedown", () => keys[dir] = true);
+  b.addEventListener("mouseup", () => keys[dir] = false);
 }
 
-bindButton("leftBtn", "left");
-bindButton("rightBtn", "right");
+bind("left", "left");
+bind("right", "right");
 
-// 🚗 CAR DRAW
+// 🚗 draw car (simple)
 function drawCar() {
   ctx.fillStyle = "lime";
   ctx.fillRect(car.x, car.y, car.w, car.h);
 
   ctx.fillStyle = "black";
-  ctx.fillRect(car.x + 8, car.y + 10, 24, 20);
+  ctx.fillRect(car.x + 10, car.y + 10, 20, 20);
 }
 
-// 🚙 ENEMIES
-function drawEnemies() {
-  ctx.fillStyle = "red";
-  enemies.forEach(e => ctx.fillRect(e.x, e.y, 40, 70));
-}
+// 🛣 simple road
+let lineY = 0;
 
-// 💰 COINS
-function drawCoins() {
-  ctx.fillStyle = "gold";
-  coins.forEach(c => {
-    ctx.beginPath();
-    ctx.arc(c.x, c.y, 7, 0, Math.PI * 2);
-    ctx.fill();
-  });
-}
-
-// 🛣 ROAD (CURVED EFFECT)
 function drawRoad() {
-  ctx.fillStyle = "#333";
+  ctx.fillStyle = "#111";
   ctx.fillRect(0, 0, 350, 600);
 
+  ctx.fillStyle = "#333";
+  ctx.fillRect(150, 0, 50, 600);
+
   ctx.fillStyle = "white";
-  roadOffset += 4;
-
   for (let i = 0; i < 10; i++) {
-    let x = 170 + Math.sin((i + roadOffset * 0.02)) * 60;
-    ctx.fillRect(x, i * 70, 10, 40);
+    ctx.fillRect(172, (i * 60 + lineY) % 600, 6, 30);
   }
+
+  lineY += 4;
 }
 
-// 🎧 SOUND
-function coinSound() {
-  document.getElementById("coinSound").play();
-}
-
-function crashSound() {
-  document.getElementById("crashSound").play();
-}
-
-// 🔁 UPDATE GAME
+// 🎮 update
 function update() {
   if (gameOver) return;
 
-  // 🚗 smooth movement (FIXED)
   if (keys.left) car.x -= car.speed;
   if (keys.right) car.x += car.speed;
 
-  if (car.x < 0) car.x = 0;
-  if (car.x > 310) car.x = 310;
+  if (car.x < 120) car.x = 120;
+  if (car.x > 190) car.x = 190;
 
-  enemies.forEach(e => e.y += 5);
-  coins.forEach(c => c.y += 5);
-
-  // 🚙 collision enemies
-  enemies.forEach((e, i) => {
-    if (
-      car.x < e.x + 40 &&
-      car.x + car.w > e.x &&
-      car.y < e.y + 70 &&
-      car.y + car.h > e.y
-    ) {
-      crashSound();
-      gameOver = true;
-      document.getElementById("restart").style.display = "block";
-    }
-
-    if (e.y > 600) enemies.splice(i, 1);
-  });
-
-  // 💰 coins
-  coins.forEach((c, i) => {
-    if (
-      car.x < c.x + 10 &&
-      car.x + car.w > c.x &&
-      car.y < c.y + 10 &&
-      car.y + car.h > c.y
-    ) {
-      coinSound();
-      score++;
-      coins.splice(i, 1);
-    }
-  });
-
-  document.getElementById("info").innerText = "Score: " + score;
+  score++;
+  document.getElementById("score").innerText = "Score: " + score;
 }
 
 // 🔄 restart
@@ -219,7 +145,7 @@ function restart() {
   init();
 }
 
-// 🎮 LOOP
+// 🎮 loop
 function loop() {
   ctx.clearRect(0, 0, 350, 600);
 
@@ -227,27 +153,11 @@ function loop() {
 
   if (!gameOver) {
     drawCar();
-    drawEnemies();
-    drawCoins();
     update();
-  } else {
-    ctx.fillStyle = "white";
-    ctx.font = "30px Arial";
-    ctx.fillText("💥 GAME OVER", 70, 250);
-    ctx.font = "20px Arial";
-    ctx.fillText("Score: " + score, 120, 300);
   }
 
   requestAnimationFrame(loop);
 }
-
-// ⏱ SPAWN SYSTEM
-setInterval(() => {
-  if (!gameOver) {
-    spawnEnemy();
-    if (Math.random() > 0.6) spawnCoin();
-  }
-}, 800);
 
 loop();
 </script>
