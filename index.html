@@ -1,13 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Car Game</title>
+  <title>Touch Car Game</title>
   <style>
     body {
       text-align: center;
       background: #111;
       color: white;
       font-family: Arial;
+      margin: 0;
     }
 
     canvas {
@@ -17,30 +18,43 @@
       border: 2px solid white;
     }
 
+    .controls {
+      position: fixed;
+      bottom: 20px;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+    }
+
     button {
-      padding: 10px 20px;
-      margin: 10px;
-      font-size: 18px;
+      padding: 20px 30px;
+      font-size: 20px;
+      border-radius: 10px;
+      border: none;
+      background: white;
     }
   </style>
 </head>
 
 <body>
 
-<h2>🚗 Car Racing Game</h2>
-<canvas id="game" width="400" height="600"></canvas>
+<h2>🚗 Car Game (Mobile + Laptop)</h2>
 
-<br>
-<button onclick="moveLeft()">⬅ Left</button>
-<button onclick="moveRight()">➡ Right</button>
+<canvas id="game" width="350" height="600"></canvas>
 
 <p id="score">Score: 0</p>
+
+<div class="controls">
+  <button ontouchstart="moveLeft()" onclick="moveLeft()">⬅</button>
+  <button ontouchstart="moveRight()" onclick="moveRight()">➡</button>
+</div>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-let car = { x: 180, y: 500, w: 40, h: 60 };
+let car = { x: 155, y: 500, w: 40, h: 60 };
 let obstacles = [];
 let score = 0;
 let gameOver = false;
@@ -54,17 +68,17 @@ function drawCar() {
 // draw obstacles
 function drawObstacles() {
   ctx.fillStyle = "red";
-  obstacles.forEach(obs => {
-    ctx.fillRect(obs.x, obs.y, 40, 40);
+  obstacles.forEach(o => {
+    ctx.fillRect(o.x, o.y, 40, 40);
   });
 }
 
-// move obstacles
+// update obstacles
 function updateObstacles() {
   for (let i = 0; i < obstacles.length; i++) {
-    obstacles[i].y += 5;
+    obstacles[i].y += 6;
 
-    // collision check
+    // collision
     if (
       car.x < obstacles[i].x + 40 &&
       car.x + car.w > obstacles[i].x &&
@@ -74,7 +88,7 @@ function updateObstacles() {
       gameOver = true;
     }
 
-    // score increase
+    // score
     if (obstacles[i].y > 600) {
       obstacles.splice(i, 1);
       score++;
@@ -85,19 +99,20 @@ function updateObstacles() {
 
 // spawn obstacles
 function spawnObstacle() {
-  let x = Math.floor(Math.random() * 360);
+  let x = Math.floor(Math.random() * 310);
   obstacles.push({ x: x, y: 0 });
 }
 
 // controls
 function moveLeft() {
-  if (car.x > 0) car.x -= 20;
+  if (car.x > 0) car.x -= 25;
 }
 
 function moveRight() {
-  if (car.x < 360) car.x += 20;
+  if (car.x < 310) car.x += 25;
 }
 
+// keyboard support
 document.addEventListener("keydown", (e) => {
   if (e.key === "ArrowLeft") moveLeft();
   if (e.key === "ArrowRight") moveRight();
@@ -110,7 +125,7 @@ function gameLoop() {
   if (gameOver) {
     ctx.fillStyle = "white";
     ctx.font = "30px Arial";
-    ctx.fillText("Game Over", 120, 300);
+    ctx.fillText("Game Over", 100, 300);
     return;
   }
 
@@ -121,10 +136,8 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
-// spawn loop
-setInterval(spawnObstacle, 1000);
-
-// start game
+// start
+setInterval(spawnObstacle, 900);
 gameLoop();
 </script>
 
