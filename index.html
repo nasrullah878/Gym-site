@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Ultra Car Game</title>
+  <title>Modern Car Game</title>
   <style>
     body {
       margin: 0;
@@ -9,6 +9,7 @@
       color: white;
       text-align: center;
       font-family: Arial;
+      overflow: hidden;
     }
 
     canvas {
@@ -20,21 +21,22 @@
 
     .controls {
       position: fixed;
-      bottom: 10px;
+      bottom: 15px;
       width: 100%;
       display: flex;
       justify-content: center;
-      gap: 20px;
+      gap: 30px;
     }
 
     button {
-      padding: 12px 18px;
-      font-size: 16px;
+      padding: 15px 25px;
+      font-size: 18px;
       border-radius: 10px;
       border: none;
     }
 
-    #shop {
+    #restart {
+      display: none;
       margin-top: 10px;
     }
   </style>
@@ -42,92 +44,71 @@
 
 <body>
 
-<h2>🚗 Ultra Car Game</h2>
+<h2>🚗 Modern Car Game</h2>
 
 <canvas id="game" width="350" height="600"></canvas>
 
-<p id="info">Score: 0 | Coins: 0 | Car: Sport</p>
+<p id="info">Score: 0</p>
 
-<button onclick="openShop()">🛒 Shop</button>
-<button onclick="restartGame()">🔄 Restart</button>
+<button id="restart" onclick="restart()">🔄 Restart</button>
 
 <div class="controls">
-  <button ontouchstart="startDrag(-1)" ontouchend="stopDrag()">⬅</button>
-  <button ontouchstart="startDrag(1)" ontouchend="stopDrag()">➡</button>
+  <button ontouchstart="move(-1)" onclick="move(-1)">⬅</button>
+  <button ontouchstart="move(1)" onclick="move(1)">➡</button>
 </div>
+
+<!-- 🎧 SOUND -->
+<audio id="crashSound" src="https://www.soundjay.com/button/beep-07.wav"></audio>
+<audio id="coinSound" src="https://www.soundjay.com/button/beep-09.wav"></audio>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
 let car, enemies, coins, score, gameOver;
-let coinsCollected = 0;
-let carType = "sport";
-let steering = 0;
-
-// 🚗 CAR SKINS
-const cars = {
-  sport: "lime",
-  truck: "orange"
-};
+let dir = 0;
 
 function init() {
   car = { x: 155, y: 500, w: 40, h: 70 };
   enemies = [];
   coins = [];
   score = 0;
-  coinsCollected = 0;
   gameOver = false;
+  document.getElementById("restart").style.display = "none";
 }
 
 init();
 
-// 🌆 curved road effect
-let roadOffset = 0;
+// 🎮 movement
+function move(d) {
+  dir = d;
 
-// 🎮 steering (drag)
-function startDrag(dir) {
-  steering = dir;
+  // 🔊 unlock sound on first interaction (important fix)
+  document.getElementById("crashSound").play().catch(()=>{});
 }
 
-function stopDrag() {
-  steering = 0;
-}
-
-// 🚗 move car
-function updateCar() {
-  car.x += steering * 6;
-  if (car.x < 0) car.x = 0;
-  if (car.x > 310) car.x = 310;
-}
-
-// 🚙 enemies
+// 🚗 spawn enemy
 function spawnEnemy() {
   enemies.push({ x: Math.random() * 310, y: -80 });
 }
 
-// 💰 coins
+// 💰 spawn coin
 function spawnCoin() {
   coins.push({ x: Math.random() * 310, y: -50 });
 }
 
-// 🎨 draw road (CURVED EFFECT)
-function drawRoad() {
-  ctx.fillStyle = "#333";
-  ctx.fillRect(0, 0, 350, 600);
-
-  ctx.fillStyle = "white";
-  roadOffset += 3;
-
-  for (let i = 0; i < 10; i++) {
-    let x = 170 + Math.sin((i + roadOffset * 0.02)) * 50;
-    ctx.fillRect(x, i * 70, 10, 40);
-  }
+// 🎧 sounds
+function playCrash() {
+  document.getElementById("crashSound").play();
 }
 
-// 🚗 car
+function playCoin() {
+  document.getElementById("coinSound").play();
+}
+
+// 🚗 draw car (real shape)
 function drawCar() {
-  ctx.fillStyle = cars[carType];
+  ctx.fillStyle = "lime";
   ctx.fillRect(car.x, car.y, car.w, car.h);
 
   ctx.fillStyle = "black";
@@ -137,9 +118,7 @@ function drawCar() {
 // 🚙 enemies
 function drawEnemies() {
   ctx.fillStyle = "red";
-  enemies.forEach(e => {
-    ctx.fillRect(e.x, e.y, 40, 70);
-  });
+  enemies.forEach(e => ctx.fillRect(e.x, e.y, 40, 70));
 }
 
 // 💰 coins
@@ -152,14 +131,18 @@ function drawCoins() {
   });
 }
 
-// 🔁 update game objects
+// 🔁 update game
 function update() {
-  updateCar();
+  if (gameOver) return;
 
-  enemies.forEach(e => e.y += 5);
+  car.x += dir * 5;
+  if (car.x < 0) car.x = 0;
+  if (car.x > 310) car.x = 310;
+
+  enemies.forEach(e => e.y += 6);
   coins.forEach(c => c.y += 5);
 
-  // collision enemy
+  // collision enemies
   enemies.forEach((e, i) => {
     if (
       car.x < e.x + 40 &&
@@ -167,13 +150,15 @@ function update() {
       car.y < e.y + 70 &&
       car.y + car.h > e.y
     ) {
+      playCrash();
       gameOver = true;
+      document.getElementById("restart").style.display = "block";
     }
 
     if (e.y > 600) enemies.splice(i, 1);
   });
 
-  // coin collect
+  // coins collect
   coins.forEach((c, i) => {
     if (
       car.x < c.x + 10 &&
@@ -181,58 +166,39 @@ function update() {
       car.y < c.y + 10 &&
       car.y + car.h > c.y
     ) {
-      coinsCollected++;
+      playCoin();
+      score++;
       coins.splice(i, 1);
     }
   });
 
-  score++;
-}
-
-// 🛒 shop
-function openShop() {
-  let choice = prompt("Choose car: sport / truck");
-  if (choice === "sport" || choice === "truck") {
-    carType = choice;
-  }
+  document.getElementById("info").innerText = "Score: " + score;
 }
 
 // 🔄 restart
-function restartGame() {
+function restart() {
   init();
-}
-
-// 📊 UI
-function updateInfo() {
-  document.getElementById("info").innerText =
-    "Score: " + score +
-    " | Coins: " + coinsCollected +
-    " | Car: " + carType;
 }
 
 // 🎮 loop
 function loop() {
   ctx.clearRect(0, 0, 350, 600);
 
-  drawRoad();
+  // road
+  ctx.fillStyle = "#333";
+  ctx.fillRect(0, 0, 350, 600);
 
   if (!gameOver) {
     drawCar();
     drawEnemies();
     drawCoins();
     update();
-    updateInfo();
   } else {
     ctx.fillStyle = "white";
     ctx.font = "30px Arial";
     ctx.fillText("💥 GAME OVER", 70, 250);
     ctx.font = "20px Arial";
     ctx.fillText("Score: " + score, 120, 300);
-
-    // save leaderboard
-    localStorage.setItem("bestScore",
-      Math.max(score, localStorage.getItem("bestScore") || 0)
-    );
   }
 
   requestAnimationFrame(loop);
@@ -242,9 +208,9 @@ function loop() {
 setInterval(() => {
   if (!gameOver) {
     spawnEnemy();
-    if (Math.random() > 0.5) spawnCoin();
+    if (Math.random() > 0.6) spawnCoin();
   }
-}, 800);
+}, 900);
 
 loop();
 </script>
