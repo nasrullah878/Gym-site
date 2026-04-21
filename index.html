@@ -1,144 +1,252 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Touch Car Game</title>
+  <title>Ultra Car Game</title>
   <style>
     body {
-      text-align: center;
+      margin: 0;
       background: #111;
       color: white;
+      text-align: center;
       font-family: Arial;
-      margin: 0;
     }
 
     canvas {
       background: #222;
       display: block;
       margin: auto;
-      border: 2px solid white;
+      border: 3px solid white;
     }
 
     .controls {
       position: fixed;
-      bottom: 20px;
+      bottom: 10px;
       width: 100%;
       display: flex;
       justify-content: center;
-      gap: 40px;
+      gap: 20px;
     }
 
     button {
-      padding: 20px 30px;
-      font-size: 20px;
+      padding: 12px 18px;
+      font-size: 16px;
       border-radius: 10px;
       border: none;
-      background: white;
+    }
+
+    #shop {
+      margin-top: 10px;
     }
   </style>
 </head>
 
 <body>
 
-<h2>🚗 Car Game (Mobile + Laptop)</h2>
+<h2>🚗 Ultra Car Game</h2>
 
 <canvas id="game" width="350" height="600"></canvas>
 
-<p id="score">Score: 0</p>
+<p id="info">Score: 0 | Coins: 0 | Car: Sport</p>
+
+<button onclick="openShop()">🛒 Shop</button>
+<button onclick="restartGame()">🔄 Restart</button>
 
 <div class="controls">
-  <button ontouchstart="moveLeft()" onclick="moveLeft()">⬅</button>
-  <button ontouchstart="moveRight()" onclick="moveRight()">➡</button>
+  <button ontouchstart="startDrag(-1)" ontouchend="stopDrag()">⬅</button>
+  <button ontouchstart="startDrag(1)" ontouchend="stopDrag()">➡</button>
 </div>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-let car = { x: 155, y: 500, w: 40, h: 60 };
-let obstacles = [];
-let score = 0;
-let gameOver = false;
+let car, enemies, coins, score, gameOver;
+let coinsCollected = 0;
+let carType = "sport";
+let steering = 0;
 
-// draw car
-function drawCar() {
-  ctx.fillStyle = "lime";
-  ctx.fillRect(car.x, car.y, car.w, car.h);
+// 🚗 CAR SKINS
+const cars = {
+  sport: "lime",
+  truck: "orange"
+};
+
+function init() {
+  car = { x: 155, y: 500, w: 40, h: 70 };
+  enemies = [];
+  coins = [];
+  score = 0;
+  coinsCollected = 0;
+  gameOver = false;
 }
 
-// draw obstacles
-function drawObstacles() {
+init();
+
+// 🌆 curved road effect
+let roadOffset = 0;
+
+// 🎮 steering (drag)
+function startDrag(dir) {
+  steering = dir;
+}
+
+function stopDrag() {
+  steering = 0;
+}
+
+// 🚗 move car
+function updateCar() {
+  car.x += steering * 6;
+  if (car.x < 0) car.x = 0;
+  if (car.x > 310) car.x = 310;
+}
+
+// 🚙 enemies
+function spawnEnemy() {
+  enemies.push({ x: Math.random() * 310, y: -80 });
+}
+
+// 💰 coins
+function spawnCoin() {
+  coins.push({ x: Math.random() * 310, y: -50 });
+}
+
+// 🎨 draw road (CURVED EFFECT)
+function drawRoad() {
+  ctx.fillStyle = "#333";
+  ctx.fillRect(0, 0, 350, 600);
+
+  ctx.fillStyle = "white";
+  roadOffset += 3;
+
+  for (let i = 0; i < 10; i++) {
+    let x = 170 + Math.sin((i + roadOffset * 0.02)) * 50;
+    ctx.fillRect(x, i * 70, 10, 40);
+  }
+}
+
+// 🚗 car
+function drawCar() {
+  ctx.fillStyle = cars[carType];
+  ctx.fillRect(car.x, car.y, car.w, car.h);
+
+  ctx.fillStyle = "black";
+  ctx.fillRect(car.x + 8, car.y + 10, 24, 20);
+}
+
+// 🚙 enemies
+function drawEnemies() {
   ctx.fillStyle = "red";
-  obstacles.forEach(o => {
-    ctx.fillRect(o.x, o.y, 40, 40);
+  enemies.forEach(e => {
+    ctx.fillRect(e.x, e.y, 40, 70);
   });
 }
 
-// update obstacles
-function updateObstacles() {
-  for (let i = 0; i < obstacles.length; i++) {
-    obstacles[i].y += 6;
+// 💰 coins
+function drawCoins() {
+  ctx.fillStyle = "gold";
+  coins.forEach(c => {
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, 8, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
 
-    // collision
+// 🔁 update game objects
+function update() {
+  updateCar();
+
+  enemies.forEach(e => e.y += 5);
+  coins.forEach(c => c.y += 5);
+
+  // collision enemy
+  enemies.forEach((e, i) => {
     if (
-      car.x < obstacles[i].x + 40 &&
-      car.x + car.w > obstacles[i].x &&
-      car.y < obstacles[i].y + 40 &&
-      car.y + car.h > obstacles[i].y
+      car.x < e.x + 40 &&
+      car.x + car.w > e.x &&
+      car.y < e.y + 70 &&
+      car.y + car.h > e.y
     ) {
       gameOver = true;
     }
 
-    // score
-    if (obstacles[i].y > 600) {
-      obstacles.splice(i, 1);
-      score++;
-      document.getElementById("score").innerText = "Score: " + score;
+    if (e.y > 600) enemies.splice(i, 1);
+  });
+
+  // coin collect
+  coins.forEach((c, i) => {
+    if (
+      car.x < c.x + 10 &&
+      car.x + car.w > c.x &&
+      car.y < c.y + 10 &&
+      car.y + car.h > c.y
+    ) {
+      coinsCollected++;
+      coins.splice(i, 1);
     }
+  });
+
+  score++;
+}
+
+// 🛒 shop
+function openShop() {
+  let choice = prompt("Choose car: sport / truck");
+  if (choice === "sport" || choice === "truck") {
+    carType = choice;
   }
 }
 
-// spawn obstacles
-function spawnObstacle() {
-  let x = Math.floor(Math.random() * 310);
-  obstacles.push({ x: x, y: 0 });
+// 🔄 restart
+function restartGame() {
+  init();
 }
 
-// controls
-function moveLeft() {
-  if (car.x > 0) car.x -= 25;
+// 📊 UI
+function updateInfo() {
+  document.getElementById("info").innerText =
+    "Score: " + score +
+    " | Coins: " + coinsCollected +
+    " | Car: " + carType;
 }
 
-function moveRight() {
-  if (car.x < 310) car.x += 25;
-}
+// 🎮 loop
+function loop() {
+  ctx.clearRect(0, 0, 350, 600);
 
-// keyboard support
-document.addEventListener("keydown", (e) => {
-  if (e.key === "ArrowLeft") moveLeft();
-  if (e.key === "ArrowRight") moveRight();
-});
+  drawRoad();
 
-// game loop
-function gameLoop() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  if (gameOver) {
+  if (!gameOver) {
+    drawCar();
+    drawEnemies();
+    drawCoins();
+    update();
+    updateInfo();
+  } else {
     ctx.fillStyle = "white";
     ctx.font = "30px Arial";
-    ctx.fillText("Game Over", 100, 300);
-    return;
+    ctx.fillText("💥 GAME OVER", 70, 250);
+    ctx.font = "20px Arial";
+    ctx.fillText("Score: " + score, 120, 300);
+
+    // save leaderboard
+    localStorage.setItem("bestScore",
+      Math.max(score, localStorage.getItem("bestScore") || 0)
+    );
   }
 
-  drawCar();
-  drawObstacles();
-  updateObstacles();
-
-  requestAnimationFrame(gameLoop);
+  requestAnimationFrame(loop);
 }
 
-// start
-setInterval(spawnObstacle, 900);
-gameLoop();
+// ⏱ spawn system
+setInterval(() => {
+  if (!gameOver) {
+    spawnEnemy();
+    if (Math.random() > 0.5) spawnCoin();
+  }
+}, 800);
+
+loop();
 </script>
 
 </body>
